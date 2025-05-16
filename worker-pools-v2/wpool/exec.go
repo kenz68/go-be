@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-func worker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan Job, results chan<- Result) {
+func worker(id int, ctx context.Context, wg *sync.WaitGroup, jobs <-chan Job, results chan<- Result) {
 	defer wg.Done()
 	for {
 		select {
@@ -14,12 +14,13 @@ func worker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan Job, results ch
 			if !ok {
 				return
 			}
-			results <- job.Execute(ctx)
+			results <- job.execute(ctx)
 		case <-ctx.Done():
 			fmt.Printf("cancelled worker. Error details: %v\n", ctx.Err())
 			results <- Result{
 				Err: ctx.Err(),
 			}
+			return
 		}
 	}
 }
@@ -43,13 +44,13 @@ func New(wcount int) WorkerPool {
 func (wp WorkerPool) Run(ctx context.Context) {
 	var wg sync.WaitGroup
 
-	for range wp.workersCount {
+	for i := range wp.workersCount {
 		wg.Add(1)
-		go worker(ctx, &wg, wp.jobs, wp.results)
+		go worker(i, ctx, &wg, wp.jobs, wp.results)
 	}
 
 	wg.Wait()
-	close(wp.jobs)
+	close(wp.Done)
 	close(wp.results)
 }
 
@@ -58,8 +59,8 @@ func (wp WorkerPool) Results() <-chan Result {
 }
 
 func (wp WorkerPool) GenerateFrom(jobsBulk []Job) {
-	for _, job := range jobsBulk {
-		wp.jobs <- job
+	for i := range jobsBulk {
+		wp.jobs <- jobsBulk[i]
 	}
 	close(wp.jobs)
 }

@@ -1,6 +1,8 @@
 package wpool
 
-import "context"
+import (
+	"context"
+)
 
 type JobID string
 type jobType string
@@ -17,17 +19,17 @@ type JobDescriptor struct {
 type Result struct {
 	Value      any
 	Err        error
-	Descriptor any
+	Descriptor JobDescriptor
 }
 
 type Job struct {
 	Descriptor JobDescriptor
-	ExecEn     ExecutionFn
+	ExecFn     ExecutionFn
 	Args       any
 }
 
-func (j Job) Execute(ctx context.Context) Result {
-	value, err := j.ExecEn(ctx, j.Args)
+func (j Job) execute(ctx context.Context) Result {
+	value, err := j.ExecFn(ctx, j.Args)
 	if err != nil {
 		return Result{
 			Err:        err,

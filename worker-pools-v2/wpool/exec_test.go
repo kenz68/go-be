@@ -1,0 +1,61 @@
+package wpool
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"testing"
+)
+
+const (
+	jobsCount   = 10
+	workerCount = 2
+)
+
+func TestWorkerPool(t *testing.T) {
+	wp := New(workerCount)
+	ctx, cancel := context.WithCancel(context.TODO())
+
+	defer cancel()
+
+	go wp.GenerateFrom(testJobs())
+
+	go wp.Run(ctx)
+
+	for {
+		select {
+		case r, ok := <-wp.Results():
+			if !ok {
+				continue
+			}
+
+			i, err := strconv.ParseInt(string(r.Descriptor.ID), 10, 64)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			val := r.Value.(int)
+			if val != int(i)*2 {
+				t.Fatalf("wrong value %v, expected %v", val, int(i)*2)
+			}
+		case <-wp.Done:
+			return
+		default:
+		}
+	}
+}
+
+func testJobs() []Job {
+	jobs := make([]Job, jobsCount)
+	for i := range jobsCount {
+		jobs[i] = Job{
+			Descriptor: JobDescriptor{
+				ID:       JobID(fmt.Sprintf("%v", i)),
+				JType:    "anyType",
+				Metadata: nil,
+			},
+			ExecFn: execFn,
+			Args:   i,
+		}
+	}
+	return jobs
+}
