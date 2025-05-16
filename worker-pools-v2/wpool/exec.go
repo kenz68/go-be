@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-func worker(id int, ctx context.Context, wg *sync.WaitGroup, jobs <-chan Job, results chan<- Result) {
+func worker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan Job, results chan<- Result) {
 	defer wg.Done()
 	for {
 		select {
@@ -44,9 +44,9 @@ func New(wcount int) WorkerPool {
 func (wp WorkerPool) Run(ctx context.Context) {
 	var wg sync.WaitGroup
 
-	for i := range wp.workersCount {
+	for range wp.workersCount {
 		wg.Add(1)
-		go worker(i, ctx, &wg, wp.jobs, wp.results)
+		go worker(ctx, &wg, wp.jobs, wp.results)
 	}
 
 	wg.Wait()
