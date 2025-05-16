@@ -1,0 +1,41 @@
+package wpool
+
+import "context"
+
+type JobID string
+type jobType string
+type jobMetadata map[string]any
+
+type ExecutionFn func(ctx context.Context, args any) (any, error)
+
+type JobDescriptor struct {
+	ID       JobID
+	JType    jobType
+	Metadata jobMetadata
+}
+
+type Result struct {
+	Value      any
+	Err        error
+	Descriptor any
+}
+
+type Job struct {
+	Descriptor JobDescriptor
+	ExecEn     ExecutionFn
+	Args       any
+}
+
+func (j Job) Execute(ctx context.Context) Result {
+	value, err := j.ExecEn(ctx, j.Args)
+	if err != nil {
+		return Result{
+			Err:        err,
+			Descriptor: j.Descriptor,
+		}
+	}
+	return Result{
+		Value:      value,
+		Descriptor: j.Descriptor,
+	}
+}
