@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 )
 
 const (
@@ -14,14 +15,14 @@ const (
 
 func TestWorkerPool(t *testing.T) {
 	wp := New(workerCount)
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Millisecond*jobsCount)
 
 	defer cancel()
 
 	go wp.GenerateFrom(testJobs())
 
 	go wp.Run(ctx)
-
+	// time.Sleep(time.Millisecond * 100)
 	for {
 		select {
 		case r, ok := <-wp.Results():
