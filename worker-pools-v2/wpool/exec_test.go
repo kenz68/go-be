@@ -45,6 +45,48 @@ func TestWorkerPool(t *testing.T) {
 	}
 }
 
+func TestWorkerPool_TimeOut(t *testing.T) {
+	wp := New(workerCount)
+
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Nanosecond*10)
+	defer cancel()
+
+	go wp.Run(ctx)
+
+	for {
+		select {
+		case r := <- wp.Results():
+			if r.Err != nil && r.Err != context.DeadlineExceeded {
+				t.Fatalf("expected error: %v; got: %v", context.DeadlineExceeded, r.Err)
+			}
+		case <- wp.Done:
+			return
+		default:
+		}
+	}
+}
+
+func TestWorkerPool_Cancel(t *testing.T) {
+	wp := New(workerCount)
+
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Nanosecond*10)
+
+	go wp.Run(ctx)
+	cancel()
+
+	for {
+		select {
+		case r := <- wp.Results():
+			if r.Err != nil && r.Err != context.Canceled {
+				t.Fatalf("expected error: %v; got: %v", context.Canceled, r.Err)
+			}
+		case <- wp.Done:
+			return
+		default:
+		}
+	}
+}
+
 func testJobs() []Job {
 	jobs := make([]Job, jobsCount)
 	for i := range jobsCount {
